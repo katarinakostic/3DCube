@@ -1,0 +1,451 @@
+Zadatak je radjen u programu Processing.
+Rubikova kocka 3x3 je predstavljena uz pomoc 27 cubelet-a.
+
+import peasy.*;
+PeasyCam cam;
+
+color[] colors =  {
+  #FFFFFF, #FFFF00,
+  #FFA500, #FF0000, 
+  #00FF00, #0000FF
+};
+
+int dim=3;
+Cubelet[] cube= new Cubelet[dim*dim*dim];
+
+Move[] allMoves={
+  new Move(0, 1, 0, 1), //Down cw
+  new Move(0, 1, 0, -1), //Down cc
+  new Move(0, -1, 0, 1), //UP cw
+  new Move(0, -1, 0, -1), //UP cc
+  new Move(1, 0, 0, 1), //RIGHT cw
+  new Move(1, 0, 0, -1), //RIGHT cc
+  new Move(0, 1, 0, 1), //LEFT cw
+  new Move(0, 1, 0, -1), //LEFT cc
+  new Move(0, 0, 1, 1), //FRONT cw
+  new Move(0, 0, 1, -1), //FRONT cc
+  new Move(0, 0, -1, 1), //BACK cw
+  new Move(0, 0, -1, -1), //BACK cc
+};
+
+ArrayList<Move> sequence=new ArrayList<Move>();
+int counter = 0;
+boolean started=false;
+//Move m; 
+
+Move currentMove;
+
+void setup(){
+  size(600, 600, P3D); //P3D renderer
+  
+  cam = new PeasyCam(this, 400);
+  
+  int index=0;
+  
+  for(int x=-1; x<=1; x++)
+    for(int y=-1; y<=1; y++)
+     for(int z=-1; z<=1; z++){
+       //float len=50;  
+       PMatrix3D matrix = new PMatrix3D();
+       matrix.translate(x, y, z);
+       cube[index] = new Cubelet(matrix, x, y, z);
+       index++;
+     } 
+     //cube[0].c=color(255, 0, 0);
+     //cube[2].c=color(0, 0, 255);
+     //turnZ();
+     
+     for(int i=0;i<50;i++){
+     
+       int r=int(random(allMoves.length));
+       Move m = allMoves[r];
+       sequence.add(m);  //dodaj 10 random pokreta
+     }
+     currentMove=sequence.get(counter);
+     for (int i=0;i<50;i++){
+     print(sequence.get(i));}
+     for(int i=sequence.size()-1 ;i>=0; i--){
+         Move nextMove = sequence.get(i).reverse();
+         sequence.add(nextMove);
+   }
+     
+   //  println(sequence);
+     //m=new Move(0,1,0,1);
+     //m.start();
+}
+
+
+void turnX(int index, int dir){
+  for ( int i = 0;  i< cube.length; i++){
+  Cubelet qb = cube[i];
+    if(qb.x==index){
+     
+      PMatrix2D matrix = new PMatrix2D();
+      matrix.rotate(dir * HALF_PI);
+      matrix.translate(qb.y, qb.z);
+      
+      qb.update(qb.x, round(matrix.m02), round(matrix.m12));
+      qb.turnFacesX(dir);
+    }
+}}
+
+void turnY(int index, int dir){
+  for ( int i = 0;  i< cube.length; i++){
+  Cubelet qb = cube[i];
+    if(qb.y == index){
+     
+      PMatrix2D matrix = new PMatrix2D();
+      matrix.rotate(dir * HALF_PI);
+      matrix.translate(qb.x, qb.z);
+      
+      qb.update(round(matrix.m02), qb.y, round(matrix.m12));
+      qb.turnFacesY(dir);
+    }
+}}
+
+void turnZ(int index, int dir){
+  for ( int i = 0;  i< cube.length; i++){
+  Cubelet qb = cube[i];
+    if(qb.z==index){
+      //println(qb.x, qb.y);
+      //PMatrix2D matrix1 = new PMatrix2D();
+      //matrix1.translate(qb.x, qb.y);
+      //matrix1.print();
+      
+      PMatrix2D matrix = new PMatrix2D();
+      matrix.rotate(dir * HALF_PI);
+      matrix.translate(qb.x, qb.y);
+      
+    
+      //x y i z su int a vrednosti u matrici su float, koristimo round umesto kastovanju u int
+      //jer ako je npr vrednost 0.999 castovanje bi nam dalo 0 a mi hoemo 1
+      qb.update(round(matrix.m02), round(matrix.m12), round(qb.z));
+      //matrix2.print();
+      //println("--------");
+      qb.turnFacesZ(dir); 
+    }
+}}
+
+void draw(){
+  background(51);
+  fill(255);
+  textSize(32);
+  text(counter, -150, -150);
+  
+  scale(50);
+  rotateX(-0.3);
+  rotateY(0.4);
+  rotateZ(0.1);
+  
+  
+  //if (started){
+    currentMove. update();   
+      if (currentMove.finished()){
+        if(counter<sequence.size()-1){
+          counter++;
+          currentMove=sequence.get(counter);
+          currentMove.start();
+        }}
+ //}
+  
+//  if (started){
+//      if (frameCount % 2 == 0 ) 
+//      if(counter<sequence.length()){
+//        char move = sequence.charAt(counter);
+//        applyMove(move);
+//        counter++;
+//      }    
+//}
+  
+  for(int i=0; i<cube.length; i++){
+    push();
+     if(abs(cube[i].x)>0 && cube[i].x == currentMove.x){
+       rotateX(currentMove.angle);
+     } else if(abs(cube[i].z)>0 && cube[i].z == currentMove.z)
+     {
+       rotateZ(currentMove.angle);
+     } 
+     else if(abs(cube[i]. y)>0 && cube[i].y == currentMove.y)
+     {
+       rotateY(-currentMove.angle);
+     }
+      cube[i].show();
+     pop();
+  }
+}
+
+
+
+//Klasa Cubelet opredstavlja svaki pojedinacni cubelet, cuva informacije o polozaju u 3d prostoru uz pomoc matrice i pomocnih x, y i z koordinata.
+//Svaki cubelet ima 6 lica i svako od njih je predstavljeno uz pomoc klase Faces. Svaki "face" je odredjen bojom i vektorom. Vektor nam pomaze da odredimo sa koje strane bojimo kojom od mogucih 6 boja.
+
+class Cubelet{
+  PMatrix3D matrix; //objekat 3d matrice
+  int x=0;
+  int y=0;
+  int z=0;
+  color c;
+  //svaki cubie ima 6 face-a od kojih svaki ima normalu i boju
+  Face[] faces = new Face[6];
+  
+  Cubelet(PMatrix3D m, int x, int y, int z){
+    //pos=new PVector(x, y, z);
+    matrix = m;
+    this.x=x;
+    this.y=y;
+    this.z=z;
+    c = color(255);
+    
+    //niz faces sadrzi sve boje lica i normalu koja oznacava njihov polozaj kada je kocka sklopljena
+    faces[0] = new Face(new PVector(0, 0, -1), color(0, 0, 255)); //plava je pozadi
+    faces[1] = new Face(new PVector(0, 0, 1), color(0, 255, 0)); //zelena je napred
+    faces[2] = new Face(new PVector(0, 1, 0), color(255, 255, 255));//white
+    faces[3] = new Face(new PVector(0, -1, 0), color(255, 255, 0)); //yellow
+    faces[4] = new Face(new PVector(1, 0, 0 ), colors[2]);
+    faces[5] = new Face(new PVector(-1, 0, 0), color(255, 0, 0));
+   
+  }
+  
+  void turnFacesZ(int dir){
+    for(Face f : faces){
+      f.turnZ(dir * HALF_PI);
+    }
+  }
+  
+  void turnFacesY(int dir){
+    for(Face f : faces){
+      f.turnY(dir * HALF_PI);
+    }
+  }
+  
+  void turnFacesX(int dir){
+    for(Face f : faces){
+      f.turnX(dir * HALF_PI);
+    }
+  }
+  
+  void update(int x, int y, int z){
+    matrix.reset();
+    matrix.translate(x, y, z);
+    this.x=x;
+    this.y=y;
+    this.z=z;
+  }
+  
+  void show(){
+    //fill(c);
+    noFill();
+    //if (highlight){
+    //  fill(255, 0, 0);
+    //}
+    stroke(0);
+    strokeWeight(0.1);
+    pushMatrix();
+    applyMatrix(matrix); 
+    box(1);
+    for (Face f : faces)
+    //svaku boju lica prikazi na odg mestu
+          f.show(x, y, z);
+    //box(len);
+    popMatrix();
+  }
+  
+}
+
+//klasa Face
+class Face{
+// svaki cubie ima 6 lica-- svih 6 bojimo
+//svaki cubie ce da ima vektor, njegova normala nam pokazuje sa koje je strane -
+//npr. (0, 0, 1) je na front strani, pokazuje u pozitivnom smeru z ose
+
+  PVector normal;
+  color c;
+  
+  Face(PVector normal, color c){
+    this.normal = normal;
+    this.c = c;
+  }
+  
+
+//rotiranje normale po x osi  
+  void turnZ(float angle){
+    PVector v2 = new PVector();
+    v2.x = round(normal.x * cos(angle) - normal.y*sin(angle));
+    v2.y = round(normal.x * sin(angle) + normal.y*cos(angle));
+    v2.z = round(normal.z);
+    normal = v2;
+  }
+   void turnX(float angle){
+    PVector v2 = new PVector();
+    v2.x = round(normal.x);
+    v2.y = round(normal.y * cos(angle) - normal.z*sin(angle));
+    v2.z = round(normal.y * sin(angle) + normal.z*cos(angle));
+    normal = v2;
+    
+  }
+  void turnY(float angle){
+    PVector v2 = new PVector();
+    v2.x = round(normal.x * cos(angle) - normal.z*sin(angle));
+    v2.z = round(normal.x * sin(angle) + normal.z*cos(angle));
+    v2.y = round(normal.y);
+    normal = v2;
+    
+  }
+  
+  void changeColor(){
+    this.c=color(255,255,255);
+  }
+  
+  void show(int x1, int y1, int z1){
+    pushMatrix();
+    if(normal.z==1){
+      if(z1 == 1){
+        fill(c);
+      } else fill(255, 255, 255);
+    }
+    if(normal.z == -1){
+      if(z1 == -1){
+        fill(c);
+      } else fill(255, 255, 255);
+    }
+    if (normal.x == 1){
+      if(x1 == 1){
+        fill(c);
+      } else fill(255, 255, 255);
+    }
+    if (normal.x == -1){
+      if(x1 == -1){
+        fill(c);
+      } else fill(255, 255, 255);
+    }
+    if (normal.y == 1){
+      if(y1 == 1){
+        fill(c);
+      } else fill(255, 255, 255);
+    }
+    if (normal.y == -1){
+      if(y1 == -1){
+        fill(c);
+      } else fill(255, 255, 255);
+    }
+    //fill(c);
+    rectMode(CENTER);
+    //square(0, 0, 1);
+    translate(0.5*normal.x, 0.5*normal.y, 0.5*normal.z);
+    if(abs(normal.x)>0)
+      rotateY(HALF_PI);
+    else if(abs(normal.y)>0)
+      rotateX(HALF_PI);
+    square(0, 0, 1);
+    popMatrix();
+  }
+
+}
+I//Klasa - Move - za animaciju pokreta. Postepeno povecava ugao od 0 do PI/2. Na kraju azurira polozaj.
+class Move{
+  float angle = 0;
+  int x = 0;
+  int y = 0;
+  int z = 0;
+  int dir=0;
+  float speed=0.15;
+  boolean animating = false;
+  boolean finished = false;
+  
+  Move(int x, int y, int z, int dir){
+    this.x=x;
+    this.y=y;
+    this.z = z;
+    this.dir=dir;
+  }
+  
+  Move reverse(){
+    return new Move(x, y, z, dir*(-1));
+  }
+  
+  //void reverse(){ dir *= -1;}
+  
+  void start(){
+    animating=true;
+    finished=false;
+    this.angle=0;
+  }
+  
+  boolean finished(){
+    return finished;
+  }
+  
+  void update(){
+    if(animating){
+    angle += dir * speed;
+    if(abs(angle)>HALF_PI){
+      angle=0;
+      animating=false;
+      finished = true;
+      if(abs(x)>0){
+        turnX(x, dir);}
+      else if (abs(z)>0){
+        turnZ(z, dir);}
+      else if (abs(y)>0){
+        //println(y);
+        turnY(y, dir);
+      }
+    }}}
+  }
+  
+//Pritisnutim tasterom (f, F, b, B, u, U, d, D, l, L, r, R) rotiramo odgovarajucu stranu kocke.
+
+void keyPressed(){
+  //INDEXI SU -1, 0, 1
+  //ne rotiramo ovu u sredini
+  if (key == ' '){
+    
+    currentMove.start();
+    counter = 0;
+    //started = true;
+  }
+  
+  switch(key)
+  {
+    case 'f':
+      turnZ(1,1);
+      break;
+    case 'F':
+     turnZ(1,-1);
+      break;
+    case 'b':
+      turnZ(-1, 1);
+      break;
+    case 'B':
+      turnZ(-1, -1);
+      break;
+    case 'u':
+      turnY(-1, 1);
+      break;
+    case 'U':
+      turnY(-1, -1);
+      break;
+    case 'd':
+      turnY(1, 1);
+      break;
+    case 'D':
+      turnY(1, -1);
+      break;  
+    case 'l':
+      turnX(-1, 1);
+      break;
+     case 'L':
+      turnX(-1, -1);
+      break;  
+    case 'r':
+      turnX(1, 1);
+      break;
+    case 'R':
+      turnX(1, -1);
+      break;  
+  }  
+ 
+} 
+
+
+
